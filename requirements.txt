@@ -1,0 +1,6 @@
+Flask
+flask-cors
+groq
+python-dotenv
+gunicorn
+httpx==0.27.2
