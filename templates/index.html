@@ -12,8 +12,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <!-- Overlay para mobile -->
     <div class="overlay" id="overlay"></div>
 
+    <!-- Barra Lateral -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <span class="logo">🦉</span>
@@ -31,17 +33,19 @@
         </div>
     </aside>
 
+    <!-- Área Principal -->
     <div class="main">
         <header class="topbar">
             <button class="menu-toggle" id="menuToggle">☰</button>
             <h2 id="chatTitle">Nova conversa</h2>
         </header>
 
+        <!-- Tela de Boas-vindas -->
         <div class="welcome-screen" id="welcomeScreen">
             <div class="welcome-logo">🦉</div>
             <h2 class="welcome-title">Olá, <span id="welcomeName">amigo(a)</span>!</h2>
             <p class="welcome-subtitle">Sou o Corujinha Ajuda. Como posso te ajudar hoje?</p>
-
+            
             <div class="suggestions">
                 <button class="suggestion-card" data-prompt="Me explique o que é inteligência artificial de forma simples.">
                     <span class="suggestion-icon">💡</span>
@@ -61,19 +65,24 @@
                 </button>
             </div>
 
-            <!-- Seletor de modelo -->
+            <!-- Seletor de Modelo -->
             <div class="model-selector">
                 <label for="modelSelect">🤖 Modelo de IA:</label>
                 <select id="modelSelect">
-                    <option value="openai/gpt-oss-120b" selected>GPT-OSS 120B (padrão, mais capaz)</option>
-                    <option value="openai/gpt-oss-20b">GPT-OSS 20B (mais rápido, menor limite diário)</option>
-                    <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (multimodal, preview)</option>
+                    <option value="openai/gpt-oss-120b" selected>GPT-OSS 120B (Groq - Padrão)</option>
+                    <option value="openai/gpt-oss-20b">GPT-OSS 20B (Groq - Rápido)</option>
+                    <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (Groq)</option>
+                    <option value="openrouter/free">OpenRouter - Roteador Grátis</option>
+                    <option value="deepseek/deepseek-r1:free">DeepSeek R1 (OpenRouter - Grátis)</option>
+                    <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B (OpenRouter - Grátis)</option>
                 </select>
             </div>
         </div>
 
+        <!-- Área de Mensagens -->
         <main class="chat-container" id="chat"></main>
 
+        <!-- Input -->
         <footer class="input-area">
             <div class="input-box">
                 <textarea id="userInput" rows="1" placeholder="Pergunte alguma coisa..." autocomplete="off"></textarea>
@@ -88,6 +97,7 @@
         </footer>
     </div>
 
+    <!-- Modais -->
     <div class="modal" id="profileModal">
         <div class="modal-content">
             <h3>👤 Meu Perfil</h3>

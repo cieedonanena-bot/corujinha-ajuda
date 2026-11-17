@@ -1,5 +1,5 @@
 // ===========================================
-// Corujinha Ajuda - Lógica completa (com modelo)
+// Corujinha Ajuda - Lógica completa (Final)
 // ===========================================
 
 const chatDiv = document.getElementById('chat');
@@ -45,9 +45,7 @@ let systemPrompt = localStorage.getItem('corujinha_prompt') || DEFAULT_PROMPT;
 let userName = localStorage.getItem('corujinha_username') || '';
 let selectedModel = localStorage.getItem('corujinha_model') || 'openai/gpt-oss-120b';
 
-// ===========================================
 // Inicializa o seletor de modelo
-// ===========================================
 modelSelect.value = selectedModel;
 modelSelect.addEventListener('change', () => {
     selectedModel = modelSelect.value;
@@ -63,9 +61,7 @@ function toggleTheme() {
     applyTheme();
 }
 
-function saveConversations() {
-    localStorage.setItem('corujinha_conversations', JSON.stringify(conversations));
-}
+function saveConversations() { localStorage.setItem('corujinha_conversations', JSON.stringify(conversations)); }
 
 function saveCurrentConversation() {
     if (!currentConversationId) return;
@@ -81,9 +77,7 @@ function saveCurrentConversation() {
     saveConversations();
 }
 
-function renderMarkdown(raw) {
-    return DOMPurify.sanitize(marked.parse(raw));
-}
+function renderMarkdown(raw) { return DOMPurify.sanitize(marked.parse(raw)); }
 
 function renderHistory() {
     historyList.innerHTML = '';
@@ -118,6 +112,8 @@ function showWelcome() {
     welcomeScreen.classList.remove('hidden');
     chatDiv.innerHTML = '';
     welcomeName.textContent = userName || 'amigo(a)';
+    // Restaura o modelo visualmente caso a tela de boas-vindas apareça
+    modelSelect.value = selectedModel;
 }
 
 function hideWelcome() { welcomeScreen.classList.add('hidden'); }
@@ -401,25 +397,15 @@ function openModal(modal) { modal.classList.add('active'); }
 function closeModal(modal) { modal.classList.remove('active'); }
 
 sendBtn.addEventListener('click', sendMessage);
-
 input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
-
 input.addEventListener('input', () => {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 160) + 'px';
 });
 
-newChatBtn.addEventListener('click', () => {
-    saveCurrentConversation();
-    createNewConversation();
-    closeSidebar();
-});
-
+newChatBtn.addEventListener('click', () => { saveCurrentConversation(); createNewConversation(); closeSidebar(); });
 historyBtn.addEventListener('click', () => { renderHistory(); closeSidebar(); });
 
 programmingBtn.addEventListener('click', () => {
@@ -431,17 +417,8 @@ programmingBtn.addEventListener('click', () => {
     input.focus();
 });
 
-profileBtn.addEventListener('click', () => {
-    userNameInput.value = userName;
-    openModal(profileModal);
-    closeSidebar();
-});
-
-settingsBtn.addEventListener('click', () => {
-    promptInput.value = systemPrompt;
-    openModal(settingsModal);
-    closeSidebar();
-});
+profileBtn.addEventListener('click', () => { userNameInput.value = userName; openModal(profileModal); closeSidebar(); });
+settingsBtn.addEventListener('click', () => { promptInput.value = systemPrompt; openModal(settingsModal); closeSidebar(); });
 
 saveProfileBtn.addEventListener('click', () => {
     userName = userNameInput.value.trim();
@@ -459,21 +436,12 @@ savePromptBtn.addEventListener('click', () => {
 
 menuToggle.addEventListener('click', openSidebar);
 overlay.addEventListener('click', closeSidebar);
-
-document.querySelectorAll('[data-close-modal]').forEach(btn => {
-    btn.addEventListener('click', () => {
-        closeModal(profileModal);
-        closeModal(settingsModal);
-    });
-});
-
-document.querySelectorAll('.suggestion-card').forEach(card => {
-    card.addEventListener('click', () => {
-        input.value = card.dataset.prompt;
-        input.dispatchEvent(new Event('input'));
-        sendMessage();
-    });
-});
+document.querySelectorAll('[data-close-modal]').forEach(btn => btn.addEventListener('click', () => { closeModal(profileModal); closeModal(settingsModal); }));
+document.querySelectorAll('.suggestion-card').forEach(card => card.addEventListener('click', () => {
+    input.value = card.dataset.prompt;
+    input.dispatchEvent(new Event('input'));
+    sendMessage();
+}));
 
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'k') { e.preventDefault(); newChatBtn.click(); }
