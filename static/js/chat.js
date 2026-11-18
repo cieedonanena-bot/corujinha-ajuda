@@ -1,5 +1,5 @@
 // ===========================================
-// Corujinha Ajuda - Lógica completa (Final)
+// Corujinha Ajuda - Lógica completa (Com Voz e Anexo)
 // ===========================================
 
 const chatDiv = document.getElementById('chat');
@@ -9,6 +9,14 @@ const chatTitle = document.getElementById('chatTitle');
 const welcomeScreen = document.getElementById('welcomeScreen');
 const welcomeName = document.getElementById('welcomeName');
 const modelSelect = document.getElementById('modelSelect');
+const attachBtn = document.getElementById('attachBtn');
+const fileInput = document.getElementById('fileInput');
+const micBtn = document.getElementById('micBtn');
+
+const attachmentPreview = document.getElementById('attachmentPreview');
+const attName = document.getElementById('attName');
+const attIcon = document.getElementById('attIcon');
+const removeAttBtn = document.getElementById('removeAttBtn');
 
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('overlay');
@@ -34,6 +42,7 @@ let conversations = JSON.parse(localStorage.getItem('corujinha_conversations') |
 let currentConversationId = null;
 let isSending = false;
 let theme = localStorage.getItem('corujinha_theme') || 'light';
+let pendingAttachment = null;
 
 const DEFAULT_PROMPT = `Você é o "Corujinha Ajuda", um assistente de IA amigável, sábio e prestativo.
 Sua personalidade é acolhedora e eficiente.
@@ -45,7 +54,6 @@ let systemPrompt = localStorage.getItem('corujinha_prompt') || DEFAULT_PROMPT;
 let userName = localStorage.getItem('corujinha_username') || '';
 let selectedModel = localStorage.getItem('corujinha_model') || 'openai/gpt-oss-120b';
 
-// Inicializa o seletor de modelo
 modelSelect.value = selectedModel;
 modelSelect.addEventListener('change', () => {
     selectedModel = modelSelect.value;
@@ -112,7 +120,6 @@ function showWelcome() {
     welcomeScreen.classList.remove('hidden');
     chatDiv.innerHTML = '';
     welcomeName.textContent = userName || 'amigo(a)';
-    // Restaura o modelo visualmente caso a tela de boas-vindas apareça
     modelSelect.value = selectedModel;
 }
 
@@ -149,22 +156,60 @@ function loadConversation(id) {
 }
 
 async function sendMessage() {
-    const text = input.value.trim();
-    if (!text || isSending) return;
+    let text = input.value.trim();
+    const attachmentText = pendingAttachment ? pendingAttachment.text : null;
+    const attachmentName = pendingAttachment ? pendingAttachment.name : null;
+
+    if (!text && !attachmentText) return;
+    if (isSending) return;
+
     if (!currentConversationId) createNewConversation();
 
     isSending = true;
     sendBtn.disabled = true;
     hideWelcome();
 
-    addMessage(text, 'user', true, false);
+    let messageContent = text;
+    if (attachmentText) {
+        messageContent = `[Arquivo: ${attachmentName}]\n\n${attachmentText}\n\n---\n\nPergunta do usuário: ${text || "Resuma o conteúdo."}`;
+        
+        const ext = attachmentName.split('.').pop().toLowerCase();
+        const icons = { pdf: '📄', docx: '📝', xlsx: '📊' };
+        const icon = icons[ext] || '📎';
+        
+        const row = document.createElement('div');
+        row.className = 'message-row user';
+        row.innerHTML = `
+            <div class="avatar user">${(userName ? userName.charAt(0).toUpperCase() : 'U')}</div>
+            <div class="message-content">
+                <div class="message user file-card">
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 8px;">
+                        <span style="font-size: 24px;">${icon}</span>
+                        <div style="display: flex; flex-direction: column;">
+                            <strong style="font-size: 14px;">${attachmentName}</strong>
+                            <small style="opacity: 0.8; font-size: 11px;">Arquivo anexado</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatDiv.appendChild(row);
+        
+        pendingAttachment = null;
+        attachmentPreview.style.display = 'none';
+    }
+
+    if (text || (!text && !attachmentText)) {
+        addMessage(text || 'Analise o arquivo em anexo.', 'user', true, false);
+    }
+
     input.value = '';
     input.style.height = 'auto';
 
     const conv = conversations.find(c => c.id === currentConversationId);
     const isFirstMessage = conv && conv.title === 'Nova conversa';
     if (isFirstMessage) {
-        conv.title = text.slice(0, 40) + (text.length > 40 ? '...' : '');
+        conv.title = (attachmentName ? `Análise: ${attachmentName}` : text).slice(0, 40);
         chatTitle.textContent = conv.title;
         renderHistory();
     }
@@ -175,10 +220,15 @@ async function sendMessage() {
         const history = Array.from(chatDiv.querySelectorAll('.message-row'))
             .filter(row => !row.classList.contains('typing-row'))
             .slice(-10)
-            .map(row => {
+            .map((row, index, arr) => {
                 const isUser = row.classList.contains('user');
                 const msgEl = row.querySelector('.message');
-                return { role: isUser ? 'user' : 'assistant', content: msgEl.dataset.raw || msgEl.textContent };
+                let content = msgEl.dataset.raw || msgEl.textContent;
+                
+                if (isUser && attachmentText && index === arr.length - 1) {
+                    content = messageContent;
+                }
+                return { role: isUser ? 'user' : 'assistant', content: content };
             });
 
         const response = await fetch('/api/chat', {
@@ -396,6 +446,135 @@ function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.re
 function openModal(modal) { modal.classList.add('active'); }
 function closeModal(modal) { modal.classList.remove('active'); }
 
+// ===========================================
+// Upload de Arquivos (Chip)
+// ===========================================
+attachBtn.addEventListener('click', () => {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    attachmentPreview.style.display = 'inline-flex';
+    attIcon.textContent = '⏳';
+    attName.textContent = `Lendo ${file.name}...`;
+    removeAttBtn.style.display = 'none';
+
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        fileInput.value = ''; 
+
+        if (data.error) {
+            alert(`Erro no arquivo: ${data.error}`);
+            attachmentPreview.style.display = 'none';
+            return;
+        }
+
+        pendingAttachment = { name: file.name, text: data.text };
+        
+        const ext = file.name.split('.').pop().toLowerCase();
+        const icons = { pdf: '📄', docx: '📝', xlsx: '📊' };
+        
+        attIcon.textContent = icons[ext] || '📎';
+        attName.textContent = file.name;
+        removeAttBtn.style.display = 'flex';
+        
+        input.focus();
+        
+    } catch (error) {
+        console.error(error);
+        attachmentPreview.style.display = 'none';
+        alert('Erro de conexão ao enviar o arquivo.');
+    }
+});
+
+removeAttBtn.addEventListener('click', () => {
+    pendingAttachment = null;
+    attachmentPreview.style.display = 'none';
+    fileInput.value = '';
+});
+
+// ===========================================
+// Entrada por Voz (Web Speech API)
+// ===========================================
+let recognition = null;
+let isRecording = false;
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+    micBtn.style.display = 'flex';
+    recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        if (input.value.trim() !== '') {
+            input.value += ' ' + transcript;
+        } else {
+            input.value = transcript;
+        }
+        input.dispatchEvent(new Event('input'));
+        input.focus();
+    };
+
+    recognition.onerror = (event) => {
+        console.error('Erro de voz:', event.error);
+        if (event.error === 'not-allowed') {
+            alert('Permissão de microfone negada. Habilite o microfone nas configurações do navegador.');
+        }
+        stopRecording();
+    };
+
+    recognition.onend = () => {
+        stopRecording();
+    };
+}
+
+function startRecording() {
+    if (!recognition) return;
+    try {
+        recognition.start();
+        isRecording = true;
+        micBtn.classList.add('recording');
+        micBtn.title = 'Gravando... Clique para parar';
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function stopRecording() {
+    isRecording = false;
+    micBtn.classList.remove('recording');
+    micBtn.title = 'Entrada por voz';
+    if (recognition) {
+        try { recognition.stop(); } catch (e) {}
+    }
+}
+
+micBtn.addEventListener('click', () => {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+});
+
+// ===========================================
+// Eventos Globais e Inicialização
+// ===========================================
 sendBtn.addEventListener('click', sendMessage);
 input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }

@@ -20,7 +20,7 @@ body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background-color: var(--bg);
     color: var(--text);
-    display: flex; /* Garante o layout lado a lado */
+    display: flex;
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
@@ -71,15 +71,8 @@ body {
 .del-btn:hover { background: #3a3b44; }
 .sidebar-footer { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #444; padding-top: 8px; }
 
-/* Main - Ocupa o resto da tela */
-.main { 
-    flex: 1; 
-    display: flex; 
-    flex-direction: column; 
-    overflow: hidden; 
-    height: 100vh;
-}
-
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100vh; }
 .topbar {
     display: flex; align-items: center; gap: 10px; padding: 12px 20px;
     border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;
@@ -149,6 +142,16 @@ body {
 .message.user { background: #10a37f; color: #fff; border-bottom-right-radius: 4px; }
 .message.bot { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
 .message.typing { font-style: italic; color: var(--text-muted); }
+
+/* Card de Arquivo */
+.message.user.file-card {
+    padding: 10px 14px;
+    background-color: var(--surface);
+    color: var(--text);
+    border: 1px solid #10a37f;
+    border-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
 
 /* Markdown */
 .message.bot h1, .message.bot h2, .message.bot h3 { margin: 12px 0 6px; line-height: 1.3; }
@@ -240,6 +243,61 @@ body {
 .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 90; }
 .overlay.active { display: block; }
 
+/* ===========================
+   Preview de Anexo (Chip)
+=========================== */
+.attachment-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 8px;
+    margin-left: max(0px, calc(50% - 410px));
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    animation: fadeIn 0.2s ease;
+}
+.attachment-preview button {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    border-radius: 4px;
+}
+.attachment-preview button:hover {
+    background: rgba(0,0,0,0.1);
+    color: #ff4d4f;
+}
+[data-theme="dark"] .attachment-preview {
+    background-color: #2a2b32;
+}
+[data-theme="dark"] .attachment-preview button:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+/* ===========================
+   Botão de Microfone (Gravando)
+=========================== */
+#micBtn.recording {
+    color: #ff4d4f !important;
+    animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
 @media (max-width: 768px) {
     .sidebar { position: fixed; top: 0; left: 0; height: 100%; transform: translateX(-100%); }
     .sidebar.open { transform: translateX(0); }
@@ -250,4 +308,5 @@ body {
     .chat-container { padding: 16px 10px; gap: 14px; }
     .message { max-width: 85%; font-size: 14px; }
     .input-area { padding: 12px 10px 8px; }
+    .attachment-preview { margin-left: 10px; }
 }

@@ -1,5 +1,9 @@
 const CACHE_NAME = 'corujinha-v1';
-const urlsToCache = ['/', '/static/css/style.css', '/static/js/chat.js'];
+const urlsToCache = [
+    '/',
+    '/static/css/style.css',
+    '/static/js/chat.js'
+];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(

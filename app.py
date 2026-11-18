@@ -1,5 +1,10 @@
 import os
-from flask import Flask, render_template, request, jsonify
+import sys
+import io
+import pdfplumber
+import docx
+import openpyxl
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 from groq import Groq
 from openai import OpenAI
@@ -7,10 +12,26 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = Flask(__name__)
+def get_base_path():
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+BASE_PATH = get_base_path()
+
+ENV_PATH = os.path.join(BASE_PATH, '.env')
+if os.path.exists(ENV_PATH):
+    load_dotenv(ENV_PATH)
+else:
+    load_dotenv()
+
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_PATH, 'templates'),
+    static_folder=os.path.join(BASE_PATH, 'static')
+)
 CORS(app)
 
-# Clientes
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 openrouter_client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
@@ -30,7 +51,6 @@ MAX_PROMPT_LEN = 4000
 DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 def get_client_and_model(model_id):
-    """Retorna o cliente correto e o modelo baseado no ID."""
     if model_id.startswith("openrouter/") or model_id.endswith(":free"):
         return openrouter_client, model_id
     return groq_client, model_id
@@ -38,6 +58,55 @@ def get_client_and_model(model_id):
 @app.route("/")
 def home():
     return render_template("index.html")
+
+@app.route('/service-worker.js')
+def service_worker():
+    return send_from_directory(app.static_folder, 'service-worker.js')
+
+@app.route("/api/upload", methods=["POST"])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "Nenhum arquivo enviado."}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "Nenhum arquivo selecionado."}), 400
+
+    ext = file.filename.rsplit('.', 1)[-1].lower()
+    text = ""
+
+    try:
+        if ext == 'pdf':
+            with pdfplumber.open(io.BytesIO(file.read())) as pdf:
+                for page in pdf.pages:
+                    text += page.extract_text() or ""
+                    text += "\n"
+        elif ext == 'docx':
+            doc = docx.Document(io.BytesIO(file.read()))
+            for para in doc.paragraphs:
+                text += para.text + "\n"
+        elif ext == 'xlsx':
+            wb = openpyxl.load_workbook(io.BytesIO(file.read()), data_only=True)
+            for sheet in wb.worksheets:
+                text += f"--- Planilha: {sheet.title} ---\n"
+                for row in sheet.iter_rows(values_only=True):
+                    row_text = "\t".join([str(cell) for cell in row if cell is not None])
+                    if row_text.strip():
+                        text += row_text + "\n"
+        else:
+            return jsonify({"error": "Formato não suportado. Use PDF, DOCX ou XLSX."}), 400
+
+        if len(text) > 15000:
+            text = text[:15000] + "\n\n[Atenção: O arquivo era muito grande e foi cortado.]"
+
+        if not text.strip():
+            return jsonify({"error": "Não foi possível extrair texto deste arquivo."}), 400
+
+        return jsonify({"text": text})
+
+    except Exception as e:
+        print(f"[ERRO UPLOAD] {e}")
+        return jsonify({"error": f"Erro ao processar o arquivo: {str(e)[:100]}"}), 500
 
 @app.route("/api/chat", methods=["POST"])
 def chat():
